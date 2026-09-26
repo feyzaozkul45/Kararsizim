@@ -1,0 +1,11 @@
+<article class="poll-card tint-{{ poll.tint_index }}">
+  <h2><a href="{% url 'poll_detail' poll.pk %}">{{ poll.question }}</a></h2>
+  <div class="poll-meta">@{{ poll.author.username }} · {{ poll.created_at|timesince }} önce</div>
+  <div class="poll-card-foot">
+    <span>
+      <span class="badge">{{ poll.vote_count }} oy</span>
+      {% if not poll.is_active %}<span class="badge badge-closed">Kapalı</span>{% endif %}
+    </span>
+    <span class="card-link" aria-hidden="true">{% if poll.is_active %}Oy ver →{% else %}Sonuçlar →{% endif %}</span>
+  </div>
+</article>

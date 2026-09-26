@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %} · Anket aç{% endblock %}
+{% block content %}
+<div class="form-card">
+  <h1>Ne konusunda kararsızsın? 🤔</h1>
+  <form method="post" id="poll-form" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul class="form-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    <div class="form-row">
+      <label for="{{ form.question.id_for_label }}">{{ form.question.label }}</label>
+      {{ form.question }}
+      <div class="counter"><span id="question-count">0</span>/200</div>
+      {% for error in form.question.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+    </div>
+
+    {% include "partials/form_field.html" with field=form.description %}
+
+    <div class="form-row">
+      <span class="form-label" id="options-label">Seçenekler (2–5 arası)</span>
+      <div class="option-inputs" id="option-inputs" role="group" aria-labelledby="options-label">
+        {% for value in form.option_values %}
+          <div class="option-input-row">
+            <input type="text" name="option" class="form-control" maxlength="80" value="{{ value }}" placeholder="Seçenek {{ forloop.counter }}" aria-label="Seçenek {{ forloop.counter }}">
+            {% if forloop.counter > 2 %}<button type="button" class="remove-option" aria-label="Seçeneği sil">×</button>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-outline btn-small" id="add-option" style="margin-top:10px">+ Seçenek ekle</button>
+    </div>
+
+    <button type="submit" class="btn btn-big" style="width:100%">Yayınla</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/poll_create.js' %}"></script>{% endblock %}

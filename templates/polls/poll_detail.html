@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static l10n %}
+{% block title %} · {{ poll.question|truncatechars:50 }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'poll_list' %}">← Tüm anketler</a>
+
+<article class="poll-detail" id="poll">
+  <h1>{{ poll.question }}</h1>
+  <p class="poll-meta">@{{ poll.author.username }} · {{ poll.created_at|timesince }} önce
+    {% if not poll.is_active %}<span class="badge badge-closed">Oylamaya kapalı</span>{% endif %}
+  </p>
+  {% if poll.description %}<p class="poll-description">{{ poll.description }}</p>{% endif %}
+
+  {% if can_vote %}
+    <form method="post" action="{% url 'poll_vote' poll.pk %}" id="vote-form">
+      {% csrf_token %}
+      <div class="options" role="group" aria-label="Seçenekler">
+        {% for result in results %}
+          <button type="submit" name="option" value="{{ result.id }}" class="option-btn tint-{{ forloop.counter0 }}">{{ result.text }}</button>
+        {% endfor %}
+      </div>
+    </form>
+    <p class="field-error" id="vote-error" role="alert" hidden></p>
+    {% if show_results %}<h2 class="section-title">Şu anki sonuçlar</h2>{% endif %}
+  {% endif %}
+
+  {# Result numbers are only rendered for viewers who may see them; the vote script fills this box after a vote. #}
+  <div class="options" id="results" aria-live="polite" {% if not show_results %}hidden{% endif %}>
+    {% if show_results %}
+      {% for result in results %}
+        <div class="result tint-{{ forloop.counter0 }}{% if result.mine %} result-mine{% endif %}">
+          <div class="result-bar" data-percent="{{ result.percent|unlocalize }}" style="width: {{ result.percent|unlocalize }}%"></div>
+          <div class="result-row">
+            <span class="result-text">{% if result.mine %}✓ {% endif %}{{ result.text }}</span>
+            <span class="result-figures">{{ result.votes }} oy · %{{ result.percent|floatformat:"-1" }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <p class="total-votes" id="total-votes">Toplam <strong>{{ total_votes }}</strong> oy</p>
+  {% if not show_results %}
+    <p class="vote-note" id="hidden-note">Sonuçları görmek için önce oy ver — böylece başkalarının seçimi seni etkilemez. 🙈</p>
+  {% endif %}
+
+  {% if is_owner %}
+    <div class="owner-actions">
+      <form method="post" action="{% url 'poll_toggle' poll.pk %}" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'poll_detail' poll.pk %}">
+        <button type="submit" class="btn btn-outline btn-small">{% if poll.is_active %}Oylamayı kapat{% else %}Oylamayı aç{% endif %}</button>
+      </form>
+      <form method="post" action="{% url 'poll_delete' poll.pk %}" class="inline-form" data-confirm="Bu anketi silmek istediğine emin misin? Bu işlem geri alınamaz.">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-small">Sil</button>
+      </form>
+    </div>
+  {% endif %}
+</article>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/poll_vote.js' %}"></script>{% endblock %}

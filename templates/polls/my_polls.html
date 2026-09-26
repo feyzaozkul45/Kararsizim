@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %} · Anketlerim{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Anketlerim</h1>
+  <a class="btn btn-small" href="{% url 'poll_create' %}">+ Anket aç</a>
+</div>
+
+{% if polls %}
+  <div class="poll-grid">
+    {% for poll in polls %}
+      <div class="poll-card tint-{{ poll.tint_index }}">
+        <h2><a href="{% url 'poll_detail' poll.pk %}">{{ poll.question }}</a></h2>
+        <div class="poll-meta">{{ poll.created_at|timesince }} önce</div>
+        <div>
+          <span class="badge">{{ poll.vote_count }} oy</span>
+          {% if not poll.is_active %}<span class="badge badge-closed">Kapalı</span>{% endif %}
+        </div>
+        <div class="my-poll-actions">
+          <form method="post" action="{% url 'poll_toggle' poll.pk %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-small">{% if poll.is_active %}Kapat{% else %}Aç{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'poll_delete' poll.pk %}" class="inline-form" data-confirm="Bu anketi silmek istediğine emin misin? Bu işlem geri alınamaz.">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-small">Sil</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <span class="emoji">📭</span>
+    <p>Henüz hiç anket açmadın. İlk sorunu sor!</p>
+    <a class="btn btn-big" href="{% url 'poll_create' %}">Anket aç</a>
+  </div>
+{% endif %}
+{% endblock %}

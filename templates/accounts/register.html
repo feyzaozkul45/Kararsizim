@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %} · Kayıt ol{% endblock %}
+{% block content %}
+<div class="form-card">
+  <h1>Aramıza katıl 🎉</h1>
+  <p class="muted">Anket açmak için üye ol. Oy vermek için üyelik gerekmez.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul class="form-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% for field in form %}{% include "partials/form_field.html" %}{% endfor %}
+    <button type="submit" class="btn btn-big" style="width:100%">Kayıt ol</button>
+  </form>
+  <p class="form-footer">Zaten üye misin? <a href="{% url 'login' %}">Giriş yap</a></p>
+</div>
+{% endblock %}

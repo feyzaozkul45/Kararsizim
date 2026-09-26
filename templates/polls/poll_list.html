@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %} · Herkesin kararsız olduğu konular{% endblock %}
+{% block content %}
+{% if not user.is_authenticated %}
+  <section class="hero">
+    <h1>Kararsız mı kaldın? 🤔</h1>
+    <p>Bir soru sor, seçenekleri yaz, başkalarının ne düşündüğünü öğren.</p>
+    <a class="btn btn-big" href="{% url 'poll_create' %}">Sen de sor!</a>
+  </section>
+{% endif %}
+
+{% if page.object_list %}
+  <div class="poll-grid">
+    {% for poll in page %}{% include "partials/poll_card.html" %}{% endfor %}
+  </div>
+
+  {% if page.has_other_pages %}
+    <nav class="pagination" aria-label="Sayfalar">
+      {% if page.has_previous %}<a class="btn btn-outline btn-small" href="?page={{ page.previous_page_number }}">← Yeniler</a>{% endif %}
+      <span class="muted">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn btn-outline btn-small" href="?page={{ page.next_page_number }}">Eskiler →</a>{% endif %}
+    </nav>
+  {% endif %}
+{% else %}
+  <div class="empty-state">
+    <span class="emoji">🤷</span>
+    <p>Henüz kimse kararsız değil… İlk soruyu sen sor!</p>
+    <a class="btn btn-big" href="{% url 'poll_create' %}">Anket aç</a>
+  </div>
+{% endif %}
+{% endblock %}
