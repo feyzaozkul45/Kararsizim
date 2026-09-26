@@ -56,6 +56,12 @@ python manage.py test
 `settings.py`, `DATABASE_URL` tanımlıyken pooler için gereken ayarları otomatik uygular
 (`CONN_MAX_AGE=0`, `DISABLE_SERVER_SIDE_CURSORS`, `sslmode=require`, hazır ifadeler kapalı).
 
+4. **Güvenlik (RLS):** Supabase `public` şemasındaki tabloları REST API'ye açar. Uygulama bu API'yi kullanmadığı için tüm tablolarda Row Level Security **politikasız** etkinleştirilmiştir (anon/authenticated roller hiçbir satıra erişemez; Django `postgres` rolüyle bağlandığı için etkilenmez). Yeni bir migration tablo eklerse şunu çalıştır ve *Advisors → Security* ekranını kontrol et:
+
+   ```sql
+   ALTER TABLE public.<yeni_tablo> ENABLE ROW LEVEL SECURITY;
+   ```
+
 ### 2. Vercel (uygulama)
 
 Vercel, Django'yu otomatik algılar (`config/wsgi.py` içindeki `application`); ayrıca `builds`/`routes` yazmaya gerek yoktur. Python sürümü `.python-version` dosyasından okunur.
