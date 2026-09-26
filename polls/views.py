@@ -223,6 +223,16 @@ def error_403(request, exception=None):
     return render(request, "403.html", status=403)
 
 
+def csrf_failure(request, reason=""):
+    """Friendly page for a stale form / missing CSRF cookie (usually an old open tab)."""
+    referer = request.META.get("HTTP_REFERER", "")
+    if url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
+        retry_url = referer
+    else:
+        retry_url = "/"
+    return render(request, "csrf_failure.html", {"retry_url": retry_url}, status=403)
+
+
 def error_404(request, exception=None):
     return render(request, "404.html", status=404)
 

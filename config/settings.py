@@ -146,3 +146,4 @@ AUTHENTICATION_BACKENDS = ["accounts.backends.EmailOrUsernameBackend"]
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "poll_list"
 LOGOUT_REDIRECT_URL = "poll_list"
+CSRF_FAILURE_VIEW = "polls.views.csrf_failure"

@@ -25,6 +25,10 @@ python manage.py runserver
 python manage.py test
 ```
 
+> **Dikkat:** `.env` içinde `DATABASE_URL` doluysa Django test veritabanını o sunucuda oluşturmaya çalışır.
+> Testleri her zaman yerel SQLite ile çalıştır: `DATABASE_URL= python manage.py test`
+> (PowerShell: `$env:DATABASE_URL=""; python manage.py test`).
+
 ## Ortam değişkenleri
 
 | Değişken | Açıklama |

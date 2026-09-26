@@ -263,3 +263,16 @@ class PollListTests(TestCase):
         self.client.force_login(other)
         response = self.client.post(reverse("poll_delete", args=[poll.pk]))
         self.assertContains(response, "Buna iznin yok", status_code=403)
+
+
+class CsrfFailureTests(TestCase):
+    def test_stale_form_gets_themed_page(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(reverse("register"), {"username": "x"}, HTTP_REFERER="http://testserver/kayit/")
+        self.assertContains(response, "Sayfanın süresi dolmuş", status_code=403)
+        self.assertContains(response, 'href="http://testserver/kayit/"', status_code=403)
+
+    def test_foreign_referer_is_not_used_as_retry_link(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(reverse("register"), {}, HTTP_REFERER="https://evil.example/")
+        self.assertNotContains(response, "evil.example", status_code=403)
