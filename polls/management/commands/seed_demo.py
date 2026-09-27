@@ -1,3 +1,4 @@
+import os
 import random
 import uuid
 from datetime import timedelta
@@ -12,7 +13,7 @@ from polls.models import Option, Poll, Vote
 
 User = get_user_model()
 
-DEMO_PASSWORD = "Demo-Sifre-2026"
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 
 DEMO_USERS = [
     {"username": "demo_ayse", "email": "demo.ayse@example.com"},
@@ -56,6 +57,11 @@ class Command(BaseCommand):
             raise CommandError(
                 "Bu komut yalnızca DEBUG=True iken çalışır (canlı veritabanına yanlışlıkla "
                 "sahte veri eklenmesini önlemek için)."
+            )
+        if not DEMO_PASSWORD:
+            raise CommandError(
+                "DEMO_PASSWORD ortam değişkenini .env dosyanda tanımlamalısın "
+                "(demo kullanıcıların şifresi olarak kullanılır)."
             )
 
         users = [self._get_or_create_user(data) for data in DEMO_USERS]
