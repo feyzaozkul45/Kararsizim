@@ -9,7 +9,9 @@ class PollForm(forms.Form):
     question = forms.CharField(
         label="Sorun",
         max_length=200,
-        widget=forms.TextInput(attrs={"class": "form-control", "maxlength": 200}),
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "maxlength": 200, "aria-describedby": "id_question_help"}
+        ),
         error_messages={
             "required": "Bir soru yazmalısın.",
             "max_length": "Soru en fazla 200 karakter olabilir.",
@@ -19,7 +21,14 @@ class PollForm(forms.Form):
         label="Açıklama (isteğe bağlı)",
         required=False,
         max_length=500,
-        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3, "maxlength": 500}),
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "maxlength": 500,
+                "aria-describedby": "id_description_help",
+            }
+        ),
         error_messages={"max_length": "Açıklama en fazla 500 karakter olabilir."},
     )
 

@@ -13,8 +13,10 @@
     <div class="form-row">
       <label for="{{ form.question.id_for_label }}">{{ form.question.label }}</label>
       {{ form.question }}
-      <div class="counter"><span id="question-count">0</span>/200</div>
-      {% for error in form.question.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      <div id="id_question_help">
+        <div class="counter"><span id="question-count">0</span>/200</div>
+        {% for error in form.question.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      </div>
     </div>
 
     {% include "partials/form_field.html" with field=form.description %}

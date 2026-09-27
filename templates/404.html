@@ -2,7 +2,7 @@
 {% block title %} · Sayfa bulunamadı{% endblock %}
 {% block content %}
 <div class="error-page">
-  <span class="emoji">🙈</span>
+  <span class="emoji" aria-hidden="true">🙈</span>
   <h1>Bu sayfa kararsız kalıp kaybolmuş</h1>
   <p class="muted">Aradığın sayfayı bulamadık.</p>
   <a class="btn" href="{% url 'poll_list' %}">Ana sayfaya dön</a>

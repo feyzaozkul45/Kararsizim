@@ -109,3 +109,23 @@ class LoginTests(TestCase):
 
         self.client.post(reverse("login"), {"username": "zeynep", "password": VALID_PASSWORD})
         self.assertIn("_auth_user_id", self.client.session)
+
+
+class AccessibilityTests(TestCase):
+    """Basic checks that assistive-tech wiring stays in place."""
+
+    def test_register_fields_are_described_for_screen_readers(self):
+        response = self.client.get(reverse("register"))
+        self.assertContains(response, 'aria-describedby="id_username_help"')
+        self.assertContains(response, 'id="id_username_help"')
+        self.assertContains(response, 'aria-describedby="id_email_help"')
+
+    def test_login_fields_are_described_for_screen_readers(self):
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, 'aria-describedby="id_username_help"')
+        self.assertContains(response, 'aria-describedby="id_password_help"')
+
+    def test_skip_link_is_present(self):
+        response = self.client.get(reverse("register"))
+        self.assertContains(response, 'href="#main-content"')
+        self.assertContains(response, 'id="main-content"')

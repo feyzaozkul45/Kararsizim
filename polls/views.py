@@ -1,3 +1,4 @@
+from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
@@ -8,6 +9,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -16,6 +18,7 @@ from .models import Option, Poll, Vote
 from .utils import get_voter_token, new_voter_token, set_voter_cookie
 
 POLLS_PER_PAGE = 12
+DUPLICATE_POLL_WINDOW = timedelta(seconds=30)
 
 
 def member_required(message):
@@ -158,6 +161,22 @@ def poll_create(request):
     if request.method == "POST":
         form = PollForm(request.POST)
         if form.is_valid():
+            # Guard against double-submitted forms (double click, slow network retry):
+            # if this author posted the exact same question moments ago, reuse that poll.
+            cutoff = timezone.now() - DUPLICATE_POLL_WINDOW
+            duplicate = (
+                Poll.objects.filter(
+                    author=request.user,
+                    question=form.cleaned_data["question"],
+                    created_at__gte=cutoff,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+            if duplicate:
+                messages.info(request, "Bu anketi az önce oluşturmuştun, ona yönlendiriliyorsun.")
+                return redirect("poll_detail", pk=duplicate.pk)
+
             with transaction.atomic():
                 poll = Poll.objects.create(
                     author=request.user,

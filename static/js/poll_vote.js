@@ -61,6 +61,12 @@
     resultsBox.hidden = false;
     animateBars(resultsBox);
 
+    // The vote form (and its focused button) is gone now; move focus to the
+    // results so keyboard/screen-reader users land somewhere meaningful
+    // instead of being dropped back at the top of the page.
+    resultsBox.setAttribute("tabindex", "-1");
+    resultsBox.focus();
+
     totalBox.textContent = "";
     totalBox.appendChild(document.createTextNode("Toplam "));
     totalBox.appendChild(el("strong", "", data.total_votes));
@@ -79,13 +85,18 @@
 
   form.addEventListener("submit", function (event) {
     var submitter = event.submitter;
-    if (!submitter || !submitter.value || !window.fetch) return; // fall back to a normal POST
+    if (!submitter || !submitter.value) return; // no option chosen, nothing to lock
 
-    event.preventDefault();
+    // Lock the buttons immediately so a double click can't fire two votes.
+    // This also covers the no-fetch fallback below: the buttons stay disabled
+    // until the page navigates away with the normal POST.
     var buttons = form.querySelectorAll("button");
     buttons.forEach(function (button) { button.disabled = true; });
     if (errorBox) errorBox.hidden = true;
 
+    if (!window.fetch) return; // fall back to a normal POST
+
+    event.preventDefault();
     var body = new FormData(form);
     body.set("option", submitter.value);
     var csrf = form.querySelector("input[name='csrfmiddlewaretoken']");

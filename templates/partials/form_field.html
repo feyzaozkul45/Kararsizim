@@ -1,6 +1,9 @@
 <div class="form-row">
   <label for="{{ field.id_for_label }}">{{ field.label }}</label>
   {{ field }}
-  {% if field.help_text %}<div class="help-text">{{ field.help_text|safe }}</div>{% endif %}
-  {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  {# Matches the aria-describedby the form sets on this field's widget. #}
+  <div id="{{ field.id_for_label }}_help">
+    {% if field.help_text %}<div class="help-text">{{ field.help_text|safe }}</div>{% endif %}
+    {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  </div>
 </div>

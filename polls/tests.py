@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Option, Poll, Vote
 from .utils import VOTER_COOKIE
@@ -70,6 +73,38 @@ class PollCreateTests(TestCase):
         self.client.force_login(self.user)
         response = self.post(["Sinema"])
         self.assertContains(response, 'value="Sinema"')
+
+    def test_double_submit_within_30_seconds_reuses_existing_poll(self):
+        self.client.force_login(self.user)
+        first = self.post(["Sinema", "Yemek"])
+        poll = Poll.objects.get()
+        second = self.post(["Sinema", "Yemek"])
+        self.assertRedirects(second, reverse("poll_detail", args=[poll.pk]))
+        self.assertEqual(Poll.objects.count(), 1)
+
+    def test_different_question_is_not_treated_as_duplicate(self):
+        self.client.force_login(self.user)
+        self.post(["Sinema", "Yemek"])
+        self.post(["A", "B"], question="Tamamen başka bir soru")
+        self.assertEqual(Poll.objects.count(), 2)
+
+    def test_same_question_from_different_author_is_not_deduped(self):
+        other = User.objects.create_user("baska", "baska@example.com", "Sifre-12345-xyz")
+        self.client.force_login(self.user)
+        self.post(["Sinema", "Yemek"])
+        self.client.force_login(other)
+        self.post(["Sinema", "Yemek"])
+        self.assertEqual(Poll.objects.count(), 2)
+
+    def test_same_question_after_the_window_creates_a_new_poll(self):
+        self.client.force_login(self.user)
+        self.post(["Sinema", "Yemek"])
+        old_poll = Poll.objects.get()
+        Poll.objects.filter(pk=old_poll.pk).update(
+            created_at=timezone.now() - timedelta(seconds=31)
+        )
+        self.post(["Sinema", "Yemek"])
+        self.assertEqual(Poll.objects.count(), 2)
 
 
 class VoteTests(TestCase):
@@ -251,6 +286,12 @@ class PollListTests(TestCase):
         self.assertEqual(len(response.context["page"]), 12)
         response = self.client.get(reverse("poll_list") + "?page=2")
         self.assertEqual(len(response.context["page"]), 3)
+
+    def test_poll_create_question_field_is_described_for_screen_readers(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("poll_create"))
+        self.assertContains(response, 'aria-describedby="id_question_help"')
+        self.assertContains(response, 'id="id_question_help"')
 
     def test_unknown_poll_returns_themed_404(self):
         response = self.client.get(reverse("poll_detail", args=[999]))

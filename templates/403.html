@@ -2,7 +2,7 @@
 {% block title %} · Erişim yok{% endblock %}
 {% block content %}
 <div class="error-page">
-  <span class="emoji">✋</span>
+  <span class="emoji" aria-hidden="true">✋</span>
   <h1>Buna iznin yok</h1>
   <p class="muted">Bu işlemi yapmaya yetkin bulunmuyor.</p>
   <a class="btn" href="{% url 'poll_list' %}">Ana sayfaya dön</a>

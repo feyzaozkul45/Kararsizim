@@ -2,7 +2,7 @@
 {% block title %} · Sayfanın süresi doldu{% endblock %}
 {% block content %}
 <div class="error-page">
-  <span class="emoji">⏳</span>
+  <span class="emoji" aria-hidden="true">⏳</span>
   <h1>Sayfanın süresi dolmuş</h1>
   <p class="muted">Bu sayfa uzun süre açık kaldı ya da oturum bilgin yenilendi. Sayfayı yenileyip formu tekrar doldurman gerekebilir.</p>
   <a class="btn" href="{{ retry_url }}">Sayfaya dön ve tekrar dene</a>

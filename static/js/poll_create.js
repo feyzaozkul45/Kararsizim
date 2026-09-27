@@ -74,5 +74,15 @@
     update();
   }
 
+  // Prevent double submits (double click, slow network) from creating two polls.
+  var form = document.getElementById("poll-form");
+  var submitButton = form && form.querySelector("button[type=submit]");
+  if (form && submitButton) {
+    form.addEventListener("submit", function () {
+      submitButton.disabled = true;
+      submitButton.textContent = "Oluşturuluyor…";
+    });
+  }
+
   refresh();
 })();

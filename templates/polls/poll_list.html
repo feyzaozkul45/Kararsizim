@@ -23,7 +23,7 @@
   {% endif %}
 {% else %}
   <div class="empty-state">
-    <span class="emoji">🤷</span>
+    <span class="emoji" aria-hidden="true">🤷</span>
     <p>Henüz kimse kararsız değil… İlk soruyu sen sor!</p>
     <a class="btn btn-big" href="{% url 'poll_create' %}">Anket aç</a>
   </div>

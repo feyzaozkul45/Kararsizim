@@ -11,8 +11,9 @@
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">İçeriğe atla</a>
   {% include "partials/navbar.html" %}
-  <main class="container">
+  <main class="container" id="main-content" tabindex="-1">
     {% include "partials/messages.html" %}
     {% block content %}{% endblock %}
   </main>

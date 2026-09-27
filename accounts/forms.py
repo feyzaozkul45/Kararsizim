@@ -24,8 +24,10 @@ class RegisterForm(UserCreationForm):
         self.fields["password2"].label = "Şifre (tekrar)"
         self.fields["password2"].help_text = ""
         self.fields["username"].widget.attrs["autocomplete"] = "username"
-        for field in self.fields.values():
+        for name, field in self.fields.items():
             field.widget.attrs.setdefault("class", "form-control")
+            # Screen readers announce this field's help text/errors alongside it.
+            field.widget.attrs.setdefault("aria-describedby", f"id_{name}_help")
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -51,5 +53,6 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
+        for name, field in self.fields.items():
             field.widget.attrs.setdefault("class", "form-control")
+            field.widget.attrs.setdefault("aria-describedby", f"id_{name}_help")
