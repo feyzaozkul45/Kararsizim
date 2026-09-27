@@ -2,6 +2,7 @@ from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
@@ -17,8 +18,11 @@ from .forms import PollForm
 from .models import Option, Poll, Vote
 from .utils import get_voter_token, new_voter_token, set_voter_cookie
 
+User = get_user_model()
+
 POLLS_PER_PAGE = 12
 DUPLICATE_POLL_WINDOW = timedelta(seconds=30)
+SORT_OPTIONS = {"yeni", "populer", "bekleyen"}
 
 
 def member_required(message):
@@ -40,9 +44,29 @@ def member_required(message):
 def polls_with_counts():
     return (
         Poll.objects.select_related("author")
+        .prefetch_related("options")
         .annotate(vote_count=Count("votes"))
         .order_by("-created_at", "-id")
     )
+
+
+def mark_voted_polls(polls, user, token):
+    """Tag each poll with `.voted` using a single batched query (avoids N+1)."""
+    poll_ids = [poll.pk for poll in polls]
+    voted_ids = set()
+    if poll_ids:
+        if user.is_authenticated:
+            voted_ids = set(
+                Vote.objects.filter(poll_id__in=poll_ids, user=user).values_list("poll_id", flat=True)
+            )
+        elif token:
+            voted_ids = set(
+                Vote.objects.filter(poll_id__in=poll_ids, voter_token=token).values_list(
+                    "poll_id", flat=True
+                )
+            )
+    for poll in polls:
+        poll.voted = poll.pk in voted_ids
 
 
 def find_existing_vote(poll, user, token):
@@ -72,9 +96,33 @@ def build_results(poll):
 
 
 def poll_list(request):
-    paginator = Paginator(polls_with_counts(), POLLS_PER_PAGE)
+    sirala = request.GET.get("sirala")
+    if sirala not in SORT_OPTIONS:
+        sirala = "yeni"
+
+    token = get_voter_token(request)
+    qs = polls_with_counts()
+    if sirala == "populer":
+        qs = qs.order_by("-vote_count", "-created_at", "-id")
+    elif sirala == "bekleyen":
+        qs = qs.filter(is_active=True)
+        if request.user.is_authenticated:
+            qs = qs.exclude(votes__user=request.user)
+        elif token:
+            qs = qs.exclude(votes__voter_token=token)
+
+    paginator = Paginator(qs, POLLS_PER_PAGE)
     page = paginator.get_page(request.GET.get("page"))
-    return render(request, "polls/poll_list.html", {"page": page})
+    mark_voted_polls(page.object_list, request.user, token)
+
+    stats = {
+        "poll_count": Poll.objects.count(),
+        "vote_count": Vote.objects.count(),
+        "member_count": User.objects.count(),
+    }
+
+    context = {"page": page, "sirala": sirala, "stats": stats}
+    return render(request, "polls/poll_list.html", context)
 
 
 def poll_detail(request, pk):

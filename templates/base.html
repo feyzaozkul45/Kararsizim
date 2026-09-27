@@ -17,6 +17,11 @@
     {% include "partials/messages.html" %}
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer">
+    <div class="container">
+      <p>kararsızım 🤔 · Karar vermek hiç bu kadar kolay olmamıştı · {% now "Y" %}</p>
+    </div>
+  </footer>
   <script src="{% static 'js/messages.js' %}"></script>
   {% block scripts %}{% endblock %}
 </body>

@@ -1,11 +1,33 @@
+{% load poll_extras %}
 <article class="poll-card tint-{{ poll.tint_index }}">
   <h2><a href="{% url 'poll_detail' poll.pk %}">{{ poll.question }}</a></h2>
-  <div class="poll-meta">@{{ poll.author.username }} · {{ poll.created_at|timesince }} önce</div>
+
+  {% with chip_options=poll.options.all %}
+    {% if chip_options %}
+      <div class="poll-chips">
+        {% for option in chip_options|slice:":3" %}
+          <span class="chip">{{ option.text }}</span>
+        {% endfor %}
+        {% if chip_options|length > 3 %}
+          <span class="chip chip-more">+{{ chip_options|length|add:"-3" }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="poll-meta">
+    <span class="avatar avatar-tint-{{ poll.author.username|avatar_tint }}" aria-hidden="true">{{ poll.author.username|initial }}</span>
+    @{{ poll.author.username }} · {{ poll.created_at|timesince }} önce
+  </div>
   <div class="poll-card-foot">
     <span>
       <span class="badge">{{ poll.vote_count }} oy</span>
-      {% if not poll.is_active %}<span class="badge badge-closed">Kapalı</span>{% endif %}
+      {% if not poll.is_active %}
+        <span class="badge badge-closed">Kapandı 🔒</span>
+      {% elif poll.voted %}
+        <span class="badge badge-voted">Oy verdin ✓</span>
+      {% endif %}
     </span>
-    <span class="card-link" aria-hidden="true">{% if poll.is_active %}Oy ver →{% else %}Sonuçlar →{% endif %}</span>
+    <span class="card-link" aria-hidden="true">{% if poll.is_active and not poll.voted %}Oy ver →{% else %}Sonuçları gör →{% endif %}</span>
   </div>
 </article>

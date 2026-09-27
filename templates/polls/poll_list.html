@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %} · Herkesin kararsız olduğu konular{% endblock %}
 {% block content %}
+<div class="bg-blobs" aria-hidden="true">
+  <span class="bg-blob bg-blob-1"></span>
+  <span class="bg-blob bg-blob-2"></span>
+  <span class="bg-blob bg-blob-3"></span>
+</div>
+
 {% if not user.is_authenticated %}
   <section class="hero">
     <h1>Kararsız mı kaldın? 🤔</h1>
@@ -9,23 +15,81 @@
   </section>
 {% endif %}
 
+<div class="stats-strip">
+  <div class="stat-box stat-purple">
+    <span class="stat-number">{{ stats.poll_count }}</span>
+    <span class="stat-label">🗳️ Toplam anket</span>
+  </div>
+  <div class="stat-box stat-pink">
+    <span class="stat-number">{{ stats.vote_count }}</span>
+    <span class="stat-label">✅ Kullanılan oy</span>
+  </div>
+  <div class="stat-box stat-teal">
+    <span class="stat-number">{{ stats.member_count }}</span>
+    <span class="stat-label">🤔 Kararsız üye</span>
+  </div>
+</div>
+
+<div class="filter-head">
+  <div class="filter-tabs" role="tablist" aria-label="Anketleri sırala">
+    <a class="filter-tab{% if sirala == 'yeni' %} active{% endif %}" href="?sirala=yeni" role="tab" aria-selected="{% if sirala == 'yeni' %}true{% else %}false{% endif %}">🆕 En yeni</a>
+    <a class="filter-tab{% if sirala == 'populer' %} active{% endif %}" href="?sirala=populer" role="tab" aria-selected="{% if sirala == 'populer' %}true{% else %}false{% endif %}">🔥 Popüler</a>
+    <a class="filter-tab{% if sirala == 'bekleyen' %} active{% endif %}" href="?sirala=bekleyen" role="tab" aria-selected="{% if sirala == 'bekleyen' %}true{% else %}false{% endif %}">🙋 Oy bekleyenler</a>
+  </div>
+  <div class="filter-head-title">
+    <h2>Anketler</h2>
+    <span class="muted">{{ page.paginator.count }} anket</span>
+  </div>
+</div>
+
 {% if page.object_list %}
   <div class="poll-grid">
     {% for poll in page %}{% include "partials/poll_card.html" %}{% endfor %}
+    {% if page.paginator.count < 6 %}
+      <a class="poll-card poll-card-ghost" href="{% if user.is_authenticated %}{% url 'poll_create' %}{% else %}{% url 'register' %}{% endif %}">
+        <span class="ghost-emoji" aria-hidden="true">✨</span>
+        <p>Aklında bir soru mu var?<br>Kararsızlığını paylaş</p>
+      </a>
+    {% endif %}
   </div>
 
   {% if page.has_other_pages %}
     <nav class="pagination" aria-label="Sayfalar">
-      {% if page.has_previous %}<a class="btn btn-outline btn-small" href="?page={{ page.previous_page_number }}">← Yeniler</a>{% endif %}
+      {% if page.has_previous %}<a class="btn btn-outline btn-small" href="?sirala={{ sirala }}&page={{ page.previous_page_number }}">← Yeniler</a>{% endif %}
       <span class="muted">{{ page.number }} / {{ page.paginator.num_pages }}</span>
-      {% if page.has_next %}<a class="btn btn-outline btn-small" href="?page={{ page.next_page_number }}">Eskiler →</a>{% endif %}
+      {% if page.has_next %}<a class="btn btn-outline btn-small" href="?sirala={{ sirala }}&page={{ page.next_page_number }}">Eskiler →</a>{% endif %}
     </nav>
   {% endif %}
 {% else %}
   <div class="empty-state">
     <span class="emoji" aria-hidden="true">🤷</span>
-    <p>Henüz kimse kararsız değil… İlk soruyu sen sor!</p>
-    <a class="btn btn-big" href="{% url 'poll_create' %}">Anket aç</a>
+    {% if sirala == 'bekleyen' %}
+      <p>Tüm aktif anketlere oy vermişsin! 🎉 Yakında yeni anketler için tekrar bak.</p>
+    {% else %}
+      <p>Henüz kimse kararsız değil… İlk soruyu sen sor!</p>
+      <a class="btn btn-big" href="{% url 'poll_create' %}">Anket aç</a>
+    {% endif %}
   </div>
 {% endif %}
+
+<section class="how-it-works">
+  <h2 class="section-heading">Nasıl çalışır?</h2>
+  <div class="how-steps">
+    <div class="how-step how-step-purple">
+      <span class="how-emoji" aria-hidden="true">🤔</span>
+      <h3>1. Sorunu yaz</h3>
+      <p>Kararsız kaldığın konuyu birkaç kelimeyle anlat.</p>
+    </div>
+    <div class="how-step how-step-pink">
+      <span class="how-emoji" aria-hidden="true">🎯</span>
+      <h3>2. Seçenekleri ekle</h3>
+      <p>2 ile 5 arasında seçenek yaz, anketini yayınla.</p>
+    </div>
+    <div class="how-step how-step-teal">
+      <span class="how-emoji" aria-hidden="true">📊</span>
+      <h3>3. Oyları gör</h3>
+      <p>Oy verince sonuçları anında görürsün.</p>
+    </div>
+  </div>
+</section>
 {% endblock %}

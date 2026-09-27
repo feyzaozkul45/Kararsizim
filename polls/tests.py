@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Option, Poll, Vote
+from .templatetags.poll_extras import avatar_tint, initial
 from .utils import VOTER_COOKIE
 
 User = get_user_model()
@@ -281,7 +282,7 @@ class PollListTests(TestCase):
     def test_pagination_and_query_count(self):
         for i in range(15):
             make_poll(self.owner, question=f"Soru numarası {i}")
-        with self.assertNumQueries(2):  # count + page
+        with self.assertNumQueries(6):  # page count + page objects + options prefetch + 3 stats counts
             response = self.client.get(reverse("poll_list"))
         self.assertEqual(len(response.context["page"]), 12)
         response = self.client.get(reverse("poll_list") + "?page=2")
@@ -304,6 +305,151 @@ class PollListTests(TestCase):
         self.client.force_login(other)
         response = self.client.post(reverse("poll_delete", args=[poll.pk]))
         self.assertContains(response, "Buna iznin yok", status_code=403)
+
+
+class PollListFilterTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user("sahip", "sahip@example.com", "Sifre-12345-xyz")
+
+    def test_stats_strip_shows_totals(self):
+        poll = make_poll(self.owner)
+        self.client.post(reverse("poll_vote", args=[poll.pk]), {"option": poll.options.first().pk})
+        response = self.client.get(reverse("poll_list"))
+        self.assertEqual(response.context["stats"]["poll_count"], 1)
+        self.assertEqual(response.context["stats"]["vote_count"], 1)
+        self.assertEqual(response.context["stats"]["member_count"], 1)
+
+    def test_default_sort_is_newest_first(self):
+        old = make_poll(self.owner, question="Eski soru")
+        Poll.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
+        new = make_poll(self.owner, question="Yeni soru")
+        response = self.client.get(reverse("poll_list"))
+        self.assertEqual(response.context["sirala"], "yeni")
+        self.assertEqual([p.pk for p in response.context["page"]], [new.pk, old.pk])
+
+    def test_populer_sorts_by_vote_count(self):
+        quiet = make_poll(self.owner, question="Sessiz anket")
+        popular = make_poll(self.owner, question="Popüler anket")
+        self.client.post(reverse("poll_vote", args=[popular.pk]), {"option": popular.options.first().pk})
+        response = self.client.get(reverse("poll_list") + "?sirala=populer")
+        self.assertEqual([p.pk for p in response.context["page"]], [popular.pk, quiet.pk])
+
+    def test_bekleyen_excludes_polls_guest_already_voted(self):
+        voted = make_poll(self.owner, question="Oy verilen anket")
+        unvoted = make_poll(self.owner, question="Bekleyen anket")
+        self.client.post(reverse("poll_vote", args=[voted.pk]), {"option": voted.options.first().pk})
+        response = self.client.get(reverse("poll_list") + "?sirala=bekleyen")
+        self.assertEqual([p.pk for p in response.context["page"]], [unvoted.pk])
+
+    def test_bekleyen_excludes_polls_member_already_voted(self):
+        member = User.objects.create_user("uye", "uye@example.com", "Sifre-12345-xyz")
+        voted = make_poll(self.owner, question="Oy verilen anket")
+        unvoted = make_poll(self.owner, question="Bekleyen anket")
+        self.client.force_login(member)
+        self.client.post(reverse("poll_vote", args=[voted.pk]), {"option": voted.options.first().pk})
+        response = self.client.get(reverse("poll_list") + "?sirala=bekleyen")
+        self.assertEqual([p.pk for p in response.context["page"]], [unvoted.pk])
+
+    def test_bekleyen_hides_closed_polls(self):
+        closed = make_poll(self.owner, question="Kapalı anket", is_active=False)
+        response = self.client.get(reverse("poll_list") + "?sirala=bekleyen")
+        self.assertNotIn(closed.pk, [p.pk for p in response.context["page"]])
+
+    def test_unknown_sirala_falls_back_to_newest(self):
+        response = self.client.get(reverse("poll_list") + "?sirala=gecersiz")
+        self.assertEqual(response.context["sirala"], "yeni")
+
+    def test_pagination_links_preserve_sirala(self):
+        for i in range(15):
+            make_poll(self.owner, question=f"Popüler soru {i}")
+        response = self.client.get(reverse("poll_list") + "?sirala=populer")
+        self.assertContains(response, "?sirala=populer&page=2")
+
+
+class PollExtrasFilterTests(TestCase):
+    def test_avatar_tint_is_stable_for_same_username(self):
+        self.assertEqual(avatar_tint("ayse"), avatar_tint("ayse"))
+
+    def test_avatar_tint_in_range(self):
+        self.assertIn(avatar_tint("herhangi_biri"), range(5))
+
+    def test_initial_uses_first_letter_uppercased(self):
+        self.assertEqual(initial("ayse"), "A")
+
+    def test_initial_handles_empty(self):
+        self.assertEqual(initial(""), "?")
+
+
+class PollCardRenderingTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user("sahip", "sahip@example.com", "Sifre-12345-xyz")
+
+    def test_chips_show_first_three_options_and_more_badge(self):
+        make_poll(self.owner, options=["A", "B", "C", "D", "E"])
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, '<span class="chip">A</span>', html=True)
+        self.assertContains(response, '<span class="chip">B</span>', html=True)
+        self.assertContains(response, '<span class="chip">C</span>', html=True)
+        self.assertNotContains(response, '<span class="chip">D</span>', html=True)
+        self.assertContains(response, "+2")
+
+    def test_chips_show_all_when_three_or_fewer(self):
+        make_poll(self.owner, options=["Sinema", "Yemek"])
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, '<span class="chip">Sinema</span>', html=True)
+        self.assertNotContains(response, "chip-more")
+
+    def test_voted_badge_and_button_text_after_voting(self):
+        poll = make_poll(self.owner)
+        self.client.post(reverse("poll_vote", args=[poll.pk]), {"option": poll.options.first().pk})
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, "Oy verdin ✓")
+        self.assertContains(response, "Sonuçları gör →")
+
+    def test_closed_badge_shown_for_inactive_poll(self):
+        make_poll(self.owner, is_active=False)
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, "Kapandı 🔒")
+
+    def test_avatar_uses_same_tint_for_same_author_across_polls(self):
+        make_poll(self.owner, question="Birinci soru")
+        make_poll(self.owner, question="İkinci soru")
+        response = self.client.get(reverse("poll_list"))
+        tint = avatar_tint(self.owner.username)
+        self.assertEqual(response.content.decode().count(f"avatar avatar-tint-{tint}"), 2)
+
+    def test_ghost_card_appears_when_fewer_than_six_polls(self):
+        make_poll(self.owner)
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, "poll-card-ghost")
+        self.assertContains(response, "Kararsızlığını paylaş")
+
+    def test_ghost_card_hidden_when_six_or_more_polls(self):
+        for i in range(6):
+            make_poll(self.owner, question=f"Soru {i}")
+        response = self.client.get(reverse("poll_list"))
+        self.assertNotContains(response, "poll-card-ghost")
+
+    def test_ghost_card_links_guest_to_register(self):
+        make_poll(self.owner)
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, f'href="{reverse("register")}"')
+
+    def test_ghost_card_links_member_to_poll_create(self):
+        make_poll(self.owner)
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, f'href="{reverse("poll_create")}"')
+
+    def test_how_it_works_section_present(self):
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, "Nasıl çalışır?")
+        self.assertContains(response, "Sorunu yaz")
+
+    def test_footer_present_with_current_year(self):
+        response = self.client.get(reverse("poll_list"))
+        self.assertContains(response, "Karar vermek hiç bu kadar kolay olmamıştı")
+        self.assertContains(response, str(timezone.now().year))
 
 
 class CsrfFailureTests(TestCase):
